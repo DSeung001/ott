@@ -9,7 +9,7 @@ class WatchingHistory(models.Model):
     # settings.AUTH_USER_MODEL로 문자열 사용해서 임포트 순환 예방
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="watching_histories")
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name="watching_history")
-
+    watched_seconds = models.PositiveIntegerField(default=0)
     is_completed = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
 

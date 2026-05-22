@@ -47,9 +47,9 @@ class Season(models.Model):
 class Video(models.Model):
     season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='videos')
 
-    title = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
     video_url = models.URLField()
-    duration = models.PositiveIntegerField() # 초 단위
+    duration_seconds = models.PositiveIntegerField() # 초 단위
     thumbnail_url = models.URLField()
     episode_number = models.PositiveSmallIntegerField()
 

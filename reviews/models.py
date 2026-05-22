@@ -8,7 +8,9 @@ from django.db.models import Q, CheckConstraint
 
 class Review(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reviews')
-    text = models.TextField()
+
+    # 시리즈에는 댓글 내용 없이 평점만 매길 수 있음
+    text = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -26,7 +28,7 @@ class Review(models.Model):
     rating = models.DecimalField(
         max_digits=2,
         decimal_places=1,
-        null=True,  # 답글은 평점 없음
+        null=True,  # 답글과 각 비디오에 대한 댓글은 평점없음
         blank=True,
         validators=[
             MinValueValidator(Decimal('0.0')),
@@ -37,13 +39,27 @@ class Review(models.Model):
     class Meta:
         constraints = [
             CheckConstraint(
-                check=(
+                condition=(
                         Q(season__isnull=False, video__isnull=True) |
                         Q(season__isnull=True, video__isnull=False)
                 ),
-                name='review_must_have_target'
+                name='review_must_have_target',
+            ),
+            CheckConstraint(
+                # 점수가 있는건 시리즈만 됨
+                condition=(
+                    Q(rating__isnull=True) |
+                    Q(
+                        season__isnull=False,
+                        video__isnull=True,
+                        parent__isnull=True,
+                    )
+                ),
+                name='rating_only_on_season_review',
             )
         ]
 
     def __str__(self):
-        return f"{self.user}의 댓글: {self.text[:20]}"
+        # 파이썬은 "" 도 False 취급
+        preview = (self.text or "")[:20]
+        return f"{self.user}의 리뷰: {preview or '(내용 없음)'}"
