@@ -5,6 +5,7 @@ from users.models import Profile
 
 User = get_user_model()
 
+
 class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -26,6 +27,7 @@ class SignUpSerializer(serializers.Serializer):
         )
         return user
 
+
 # ModelSerializer로 필드 그대로 가져 오기
 class ProfileSerializer(serializers.ModelSerializer):
     # ModelSerializer는 Meta 필수
@@ -34,3 +36,29 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ('id', 'nickname', 'created_at')
         read_only_fields = ('id', 'created_at')
+
+
+# 유저 관련
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "email", "is_subscribed", "is_adult_mode")
+        read_only_fields = fields
+
+
+# 로그인
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        from django.contrib.auth import authenticate
+        user = authenticate(
+            request=self.context.get('request'),
+            email=data.get('email'),
+            password=data.get('password')
+        )
+        if not user:
+            raise serializers.ValidationError("이메일 또는 비밀번호가 올바르지 않습니다.")
+        data["user"] = user
+        return data

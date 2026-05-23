@@ -2,6 +2,7 @@ CACHE_PREFIX = "ott:users"
 AUTH_CODE_TIMEOUT = 300
 EMAIL_VERIFIED_TIMEOUT = 600
 IDENTITY_VERIFIED_TIMEOUT = 600
+AUTH_TOKEN_TTL_DAYS = 7
 
 def _normalize_email(email: str) -> str:
     return email.strip().lower()

@@ -1,6 +1,13 @@
+import secrets
+from datetime import timedelta
+
+from django.utils import timezone
+
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+from users.constants import AUTH_TOKEN_TTL_DAYS
 
 
 # https://docs.djangoproject.com/en/6.0/topics/auth/customizing/
@@ -51,3 +58,16 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.email}- {self.nickname}"
+
+
+class AuthToken(models.Model):
+    key = models.CharField(max_length=40, unique=True, db_index=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='auth_tokens')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    @classmethod
+    def create_for_user(cls, user, *, ttl_days=AUTH_TOKEN_TTL_DAYS):
+        key = secrets.token_hex(20)  # 20바이트 = 40자리
+        expires_at = timezone.now() + timedelta(days=ttl_days) if ttl_days else None
+        return cls.objects.create(key=key, user=user, expires_at=expires_at)

@@ -40,8 +40,6 @@ INSTALLED_APPS = [
 
     # 3rd Party Apps
     'rest_framework',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
 
     # Local Apps
     'users',
@@ -129,18 +127,15 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = 'users.User'
 
-# DRF 설정 등록, 인증을 JWT 방식 등록
+# DRF 설정 SessionTokenAuthentication 세션 토큰 방식
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+        'users.authentication.SessionTokenAuthentication',
+    ),
 }
 
-from datetime import timedelta
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True, # Refresh 토큰 재발급
-    'BLACKLIST_AFTER_ROTATION': True, # 이전 Refresh 토큰 블럭
-    'AUTH_HEADER_TYPES': ('Bearer','TOKEN'), # Bearer가 표준이고, Token는 호환
-}
+# 인증 백엔드 변경
+AUTHENTICATION_BACKENDS = [
+    "users.backends.EmailAuthBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]

@@ -5,10 +5,10 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.conf import settings
 
+from users.auth_tokens import create_session_token, remove_session_token
 from users.constants import (
     AUTH_CODE_TIMEOUT,
     EMAIL_VERIFIED_TIMEOUT,
@@ -17,7 +17,7 @@ from users.constants import (
     get_email_verified_cache_key,
     get_identity_verified_cache_key,
 )
-from users.serializers import SignUpSerializer, ProfileSerializer
+from users.serializers import SignUpSerializer, ProfileSerializer, UserSerializer, LoginSerializer
 
 User = get_user_model()
 
@@ -147,15 +147,17 @@ class SignUpView(APIView):
         serializer = SignUpSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            refresh = RefreshToken.for_user(user)
+            token = create_session_token(user)  # hex 40자
 
             cache.delete(get_email_verified_cache_key(email))
             cache.delete(get_identity_verified_cache_key(email))
 
             return Response({
                 "message": "회원가입이 완료되었습니다.",
-                "token": str(refresh.access_token),
-                "user_id": user.id
+                "user": UserSerializer(user).data,
+                "token": token,  # localStorage에 이것만
+                "method": "email",
+                "is_registered": True,
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -175,3 +177,31 @@ class MyProfileView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 로그인
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token = create_session_token(user)
+        return Response({
+            "user": UserSerializer(user).data,
+            "token": token,
+            "method": "email",
+            "is_registered": True,
+        }, status=status.HTTP_200_OK)
+
+
+# 로그 아웃
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        key = request.auth  # SessionTokenAuthentication이 넣어 줌
+        if key:
+            remove_session_token(key)
+        return Response({"message": "로그아웃되었습니다."})
