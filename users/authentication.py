@@ -4,6 +4,7 @@ from users.auth_tokens import get_user_from_token
 class SessionTokenAuthentication(authentication.BaseAuthentication):
     keyword = 'Token'
 
+    # 인증에 필요한 해더 정의
     def authenticate_header(self, request):
         return self.keyword
 
