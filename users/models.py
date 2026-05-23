@@ -2,6 +2,7 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+
 # https://docs.djangoproject.com/en/6.0/topics/auth/customizing/
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -28,8 +29,8 @@ class User(AbstractUser):
         max_length=255,
         unique=True,
     )
-    nickname = models.CharField(max_length=63, null=False, blank=True, default="User")
     is_subscribed = models.BooleanField(default=False)
+    is_adult_mode = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
 
@@ -42,3 +43,11 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
+
+class Profile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='profiles')
+    nickname = models.CharField(max_length=63)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.email}- {self.nickname}"
