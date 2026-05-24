@@ -15,8 +15,8 @@ class SignUpSerializer(serializers.Serializer):
         # password 유효성 검사
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError({'password': '비밀번호가 일치하지 않습니다.'})
-
-        # todo: db의 이메일 인증, 본인 인증 여부 체크
+        if User.objects.filter(email__iexact=data['email']).exists():
+            raise serializers.ValidationError("이미 가입된 이메일입니다.")
         return data
 
     def create(self, validated_data):

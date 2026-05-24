@@ -30,7 +30,10 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractUser):
     username = None
+    first_name = None
+    last_name = None
 
+    name = models.CharField(max_length=31)
     email = models.EmailField(
         verbose_name="email address",
         max_length=255,

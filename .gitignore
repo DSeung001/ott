@@ -17,4 +17,9 @@ env/
 .venv/
 .env/
 
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+
 .idea/
