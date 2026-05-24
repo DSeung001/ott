@@ -1,6 +1,7 @@
 "use client";
 
-import { getAvatarColor, getAvatarInitial } from "@/lib/profile-avatar";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { DEFAULT_AVATAR_FILE } from "@/lib/avatar-catalog";
 import type { CachedProfile } from "@/lib/profile-storage";
 
 type ProfileCardProps = {
@@ -16,8 +17,6 @@ export function ProfileCard({
   onSelect,
   onEdit,
 }: ProfileCardProps) {
-  const bg = getAvatarColor(profile.nickname);
-  const initial = getAvatarInitial(profile.nickname);
   const isEdit = mode === "edit";
 
   return (
@@ -28,12 +27,12 @@ export function ProfileCard({
       aria-label={isEdit ? `${profile.nickname} 수정` : `${profile.nickname} 선택`}
     >
       <span className="relative">
-        <span
-          className="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold text-white shadow-sm ring-2 ring-transparent transition group-hover:ring-[var(--auth-primary)]"
-          style={{ backgroundColor: bg }}
-        >
-          {initial}
-        </span>
+        <ProfileAvatar
+          nickname={profile.nickname}
+          avatar_file={profile.avatar_file ?? DEFAULT_AVATAR_FILE}
+          size="md"
+          className="shadow-sm ring-2 ring-transparent transition group-hover:ring-[var(--auth-primary)]"
+        />
         {isEdit && (
           <span className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[var(--foreground)] text-white shadow">
             <svg

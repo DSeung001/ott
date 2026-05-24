@@ -7,7 +7,7 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from users.constants import AUTH_TOKEN_TTL_DAYS
+from users.constants import AUTH_TOKEN_TTL_DAYS, DEFAULT_AVATAR_FILE
 
 
 # https://docs.djangoproject.com/en/6.0/topics/auth/customizing/
@@ -56,8 +56,9 @@ class User(AbstractUser):
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='profiles')
     nickname = models.CharField(max_length=15)
-    created_at = models.DateTimeField(auto_now_add=True)
+    avatar_file = models.CharField(max_length=64, default=DEFAULT_AVATAR_FILE)
     is_adult_mode = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.user.email}- {self.nickname}"

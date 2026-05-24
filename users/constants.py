@@ -4,6 +4,8 @@ EMAIL_VERIFIED_TIMEOUT = 600
 IDENTITY_VERIFIED_TIMEOUT = 600
 AUTH_TOKEN_TTL_DAYS = 7
 
+DEFAULT_AVATAR_FILE = "48363a65-24d6-45a0-9eac-8c1726656c63.webp"
+
 def _normalize_email(email: str) -> str:
     return email.strip().lower()
 

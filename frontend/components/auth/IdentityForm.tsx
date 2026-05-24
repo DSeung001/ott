@@ -60,9 +60,6 @@ export function IdentityForm({ email }: IdentityFormProps) {
         onChange={handlePhoneChange}
         maxLength={13}
       />
-      <p className="text-xs text-[var(--auth-subtle)]">
-        개발 환경에서는 Mock 본인인증이 적용됩니다. 비워두면 기본값이 사용됩니다.
-      </p>
       {error && (
         <p className="text-sm text-red-600" role="alert">
           {error}

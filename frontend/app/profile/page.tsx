@@ -12,6 +12,7 @@ import {
   getProfileUserId,
   setSelectedProfile,
 } from "@/lib/auth-storage";
+import { DEFAULT_AVATAR_FILE } from "@/lib/avatar-catalog";
 import { createProfile } from "@/lib/profile-api";
 import {
   addProfile,
@@ -57,7 +58,7 @@ function ProfilePageContent() {
   }, [ready, loadProfiles]);
 
   const handleSelect = (profile: CachedProfile) => {
-    setSelectedProfile(profile.id, profile.nickname);
+    setSelectedProfile(profile.id, profile.nickname, profile.avatar_file);
     router.push("/");
   };
 
@@ -68,10 +69,11 @@ function ProfilePageContent() {
     setCreating(true);
     setCreateError(null);
     try {
-      const result = await createProfile(nickname);
+      const result = await createProfile(nickname, DEFAULT_AVATAR_FILE);
       const cached: CachedProfile = {
         id: result.profile.id,
         nickname: result.profile.nickname,
+        avatar_file: result.profile.avatar_file,
       };
       addProfile(userId, cached);
       loadProfiles();

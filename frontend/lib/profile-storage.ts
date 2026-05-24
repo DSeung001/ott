@@ -1,6 +1,7 @@
 export type CachedProfile = {
   id: number;
   nickname: string;
+  avatar_file?: string;
 };
 
 function storageKey(userId: number): string {
@@ -33,13 +34,13 @@ export function addProfile(userId: number, profile: CachedProfile): void {
 export function updateProfileInCache(
   userId: number,
   profileId: number,
-  nickname: string,
+  data: { nickname?: string; avatar_file?: string },
 ): void {
   const existing = getProfiles(userId);
   setProfiles(
     userId,
     existing.map((p) =>
-      p.id === profileId ? { ...p, nickname } : p,
+      p.id === profileId ? { ...p, ...data } : p,
     ),
   );
 }

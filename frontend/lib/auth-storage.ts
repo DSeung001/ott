@@ -5,11 +5,13 @@ export type StoredAuthUser = {
   token: string;
   selectedProfileId?: number;
   selectedProfileNickname?: string;
+  selected_avatar_file?: string;
 };
 
 export type SelectedProfile = {
   id: number;
   nickname: string;
+  avatar_file?: string;
 };
 
 export function saveAuth(tokenHex: string, userId: number): void {
@@ -43,13 +45,18 @@ export function getProfileUserId(): number | null {
   return getStoredUser()?.profileUserId ?? null;
 }
 
-export function setSelectedProfile(id: number, nickname: string): void {
+export function setSelectedProfile(
+  id: number,
+  nickname: string,
+  avatar_file?: string,
+): void {
   const user = getStoredUser();
   if (!user) return;
   persistUser({
     ...user,
     selectedProfileId: id,
     selectedProfileNickname: nickname,
+    selected_avatar_file: avatar_file,
   });
 }
 
@@ -61,14 +68,19 @@ export function getSelectedProfile(): SelectedProfile | null {
   return {
     id: user.selectedProfileId,
     nickname: user.selectedProfileNickname,
+    avatar_file: user.selected_avatar_file,
   };
 }
 
 export function clearSelectedProfile(): void {
   const user = getStoredUser();
   if (!user) return;
-  const { selectedProfileId: _id, selectedProfileNickname: _nick, ...rest } =
-    user;
+  const {
+    selectedProfileId: _id,
+    selectedProfileNickname: _nick,
+    selected_avatar_file: _avatar,
+    ...rest
+  } = user;
   persistUser(rest);
 }
 

@@ -32,13 +32,25 @@ class SignUpSerializer(serializers.Serializer):
 # ModelSerializer로 필드 그대로 가져 오기
 class ProfileSerializer(serializers.ModelSerializer):
     nickname = serializers.CharField(max_length=15, trim_whitespace=True)
+    avatar_file = serializers.CharField(max_length=40)
 
-    # ModelSerializer는 Meta 필수
     class Meta:
         model = Profile
-        fields = ('id', 'nickname', 'created_at', 'is_adult_mode')
+        fields = ('id', 'nickname', 'avatar_file', 'created_at', 'is_adult_mode')
         read_only_fields = ('id', 'created_at')
 
+    def validate_nickname(self, value):
+        if not value:
+            raise serializers.ValidationError("닉네임을 입력해주세요.")
+        return value
+
+    def validate_avatar_file(self, value):
+        file = value.strip()
+        valid_extensions = ('.png', '.webp', '.jpg', '.jpeg')
+
+        if not file.lower().endswith(valid_extensions):
+            raise serializers.ValidationError("지원하지 않는 이미지 형식입니다. (png, webp, jpg, jpeg만 가능)")
+        return value
 
 # 유저 관련
 class UserSerializer(serializers.ModelSerializer):

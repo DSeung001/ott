@@ -26,7 +26,7 @@ export function AuthLayout({
           href={backHref}
           className="mb-6 inline-flex items-center text-sm text-[var(--auth-muted)] hover:text-[var(--foreground)]"
         >
-          ← 뒤로
+          ←
         </Link>
       )}
       {(title || subtitle) && (

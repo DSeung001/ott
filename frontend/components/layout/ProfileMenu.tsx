@@ -8,7 +8,8 @@ import {
   clearSelectedProfile,
   getSelectedProfile,
 } from "@/lib/auth-storage";
-import { getAvatarColor, getAvatarInitial } from "@/lib/profile-avatar";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { DEFAULT_AVATAR_FILE } from "@/lib/avatar-catalog";
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
@@ -74,8 +75,7 @@ export function ProfileMenu() {
 
   if (!profile) return null;
 
-  const avatarBg = getAvatarColor(profile.nickname);
-  const initial = getAvatarInitial(profile.nickname);
+  const avatar_file = profile.avatar_file ?? DEFAULT_AVATAR_FILE;
 
   const handleChangeProfile = () => {
     setOpen(false);
@@ -104,12 +104,11 @@ export function ProfileMenu() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span
-          className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
-          style={{ backgroundColor: avatarBg }}
-        >
-          {initial}
-        </span>
+        <ProfileAvatar
+          nickname={profile.nickname}
+          avatar_file={avatar_file}
+          size="sm"
+        />
         <span className="max-w-[120px] truncate text-sm font-medium text-[var(--foreground)]">
           {profile.nickname}
         </span>
@@ -126,12 +125,12 @@ export function ProfileMenu() {
             onClick={handleChangeProfile}
             className="flex w-full items-center gap-3 border-b border-[var(--auth-border)] px-4 py-4 text-left transition hover:bg-[var(--auth-page-bg)]"
           >
-            <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white"
-              style={{ backgroundColor: avatarBg }}
-            >
-              {initial}
-            </span>
+            <ProfileAvatar
+              nickname={profile.nickname}
+              avatar_file={avatar_file}
+              size="menu"
+              className="shrink-0"
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold text-[var(--foreground)]">
                 {profile.nickname}
