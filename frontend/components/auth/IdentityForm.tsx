@@ -43,10 +43,6 @@ export function IdentityForm({ email }: IdentityFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <p className="text-sm text-[var(--auth-muted)]">
-        가입 이메일:{" "}
-        <span className="font-medium text-[var(--foreground)]">{email}</span>
-      </p>
       <AuthInput
         label="이름"
         type="text"

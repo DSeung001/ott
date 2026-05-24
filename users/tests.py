@@ -123,7 +123,7 @@ class NewUserSignupTests(SignupFlowMixin, APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {response.data['token']}")
         profile_response = self.client.post(
-            reverse("users:my_profile"),
+            reverse("users:profiles"),
             {"nickname": "테스트"},
             format="json",
         )
@@ -198,7 +198,7 @@ class LogoutTests(APITestCase):
         self.client.post(reverse("users:logout"), format="json")
 
         profile_resp = self.client.post(
-            reverse("users:my_profile"),
+            reverse("users:profiles"),
             {"nickname": "x"},
             format="json",
         )
@@ -211,7 +211,7 @@ class ProfileAuthTests(APITestCase):
 
     def test_profile_without_token_returns_401(self):
         resp = self.client.post(
-            reverse("users:my_profile"),
+            reverse("users:profiles"),
             {"nickname": "x"},
             format="json",
         )
@@ -220,7 +220,7 @@ class ProfileAuthTests(APITestCase):
     def test_profile_with_invalid_token_returns_401(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token " + "0" * 40)
         resp = self.client.post(
-            reverse("users:my_profile"),
+            reverse("users:profiles"),
             {"nickname": "x"},
             format="json",
         )
@@ -270,7 +270,7 @@ class TokenExpiryTests(SignupFlowMixin, APITestCase):
 
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token_key}")
         profile_resp = self.client.post(
-            reverse("users:my_profile"),
+            reverse("users:profiles"),
             {"nickname": "x"},
             format="json",
         )

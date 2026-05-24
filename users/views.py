@@ -1,6 +1,7 @@
 import random
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -17,6 +18,7 @@ from users.constants import (
     get_email_verified_cache_key,
     get_identity_verified_cache_key,
 )
+from users.models import Profile
 from users.serializers import SignUpSerializer, ProfileSerializer, UserSerializer, LoginSerializer
 
 User = get_user_model()
@@ -135,6 +137,7 @@ class SignUpView(APIView):
 
     def post(self, request):
         email = request.data.get('email')
+        identity_name = cache.get(get_identity_verified_cache_key(email)) or ''
 
         is_verified_email = cache.get(get_email_verified_cache_key(email))
         is_identity_verified_email = cache.get(get_identity_verified_cache_key(email))
@@ -144,7 +147,10 @@ class SignUpView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer = SignUpSerializer(data=request.data)
+        serializer = SignUpSerializer(
+            data=request.data,
+            context={'identity_name': identity_name},
+        )
         if serializer.is_valid():
             user = serializer.save()
             token = create_session_token(user)  # hex 40자
@@ -163,9 +169,14 @@ class SignUpView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# 프로필 등록
-class MyProfileView(APIView):
+# 프로필 등록 및 수정
+class ProfilesView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profiles = request.user.profiles.order_by("created_at")
+        serializer = ProfileSerializer(profiles, many=True)
+        return Response({"profiles": serializer.data}, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = ProfileSerializer(data=request.data)
@@ -176,6 +187,34 @@ class MyProfileView(APIView):
                 "profile": serializer.data
             }, status=status.HTTP_201_CREATED)
 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_profile(self, request, pk):
+        return get_object_or_404(Profile, pk=pk, user=request.user)
+
+    def get(self, request, pk):
+        profile = self.get_profile(request, pk)
+        return Response(
+            {"profile": ProfileSerializer(profile).data},
+            status=status.HTTP_200_OK,
+        )
+
+    def patch(self, request, pk):
+        profile = self.get_profile(request, pk)
+        serializer = ProfileSerializer(instance=profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "message": "프로필이 수정되었습니다.",
+                    "profile": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

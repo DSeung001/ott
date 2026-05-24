@@ -2,7 +2,14 @@ const USER_STORAGE_KEY = "user";
 
 export type StoredAuthUser = {
   profileUserId: number;
-  token: string; // "Token xxxx..."
+  token: string;
+  selectedProfileId?: number;
+  selectedProfileNickname?: string;
+};
+
+export type SelectedProfile = {
+  id: number;
+  nickname: string;
 };
 
 export function saveAuth(tokenHex: string, userId: number): void {
@@ -14,6 +21,7 @@ export function saveAuth(tokenHex: string, userId: number): void {
 }
 
 export function getStoredUser(): StoredAuthUser | null {
+  if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(USER_STORAGE_KEY);
   if (!raw) return null;
   try {
@@ -21,6 +29,10 @@ export function getStoredUser(): StoredAuthUser | null {
   } catch {
     return null;
   }
+}
+
+function persistUser(user: StoredAuthUser): void {
+  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
 }
 
 export function getAuthHeader(): string | null {
@@ -31,13 +43,46 @@ export function getProfileUserId(): number | null {
   return getStoredUser()?.profileUserId ?? null;
 }
 
+export function setSelectedProfile(id: number, nickname: string): void {
+  const user = getStoredUser();
+  if (!user) return;
+  persistUser({
+    ...user,
+    selectedProfileId: id,
+    selectedProfileNickname: nickname,
+  });
+}
+
+export function getSelectedProfile(): SelectedProfile | null {
+  const user = getStoredUser();
+  if (user?.selectedProfileId == null || !user.selectedProfileNickname) {
+    return null;
+  }
+  return {
+    id: user.selectedProfileId,
+    nickname: user.selectedProfileNickname,
+  };
+}
+
+export function clearSelectedProfile(): void {
+  const user = getStoredUser();
+  if (!user) return;
+  const { selectedProfileId: _id, selectedProfileNickname: _nick, ...rest } =
+    user;
+  persistUser(rest);
+}
+
 export function clearAuth(): void {
+  if (typeof window === "undefined") return;
   localStorage.removeItem(USER_STORAGE_KEY);
-  // 선택: 예전 키 정리
   localStorage.removeItem("ott_token");
   localStorage.removeItem("ott_user");
 }
 
 export function isLoggedIn(): boolean {
   return !!getStoredUser()?.token;
+}
+
+export function hasSelectedProfile(): boolean {
+  return getSelectedProfile() != null;
 }

@@ -32,7 +32,7 @@ export function PasswordForm({ email }: PasswordFormProps) {
       const result = await signup(email, password, passwordConfirm);
       saveAuth(result.token, result.user.id);
       clearSignupEmail();
-      router.push("/");
+      router.push("/profile");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "회원가입에 실패했습니다.");
     } finally {
@@ -42,13 +42,20 @@ export function PasswordForm({ email }: PasswordFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <p className="text-sm text-[var(--auth-muted)]">
-        마지막 단계입니다. 사용할 비밀번호를 설정하세요.
-      </p>
+      <div className="space-y-3 text-center">
+        <p className="text-base font-semibold text-[var(--auth-primary)]">
+          {email}
+        </p>
+        <p className="text-sm text-[var(--auth-muted)]">
+          로그인에 사용할 비밀번호를 설정해주세요.
+        </p>
+      </div>
+
       <AuthInput
         label="비밀번호"
         type="password"
         autoComplete="new-password"
+        placeholder="8자 이상 영문/숫자/특수문자 중 2가지 포함"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
@@ -57,6 +64,7 @@ export function PasswordForm({ email }: PasswordFormProps) {
         label="비밀번호 확인"
         type="password"
         autoComplete="new-password"
+        placeholder="비밀번호를 다시 한 번 입력해주세요."
         value={passwordConfirm}
         onChange={(e) => setPasswordConfirm(e.target.value)}
         required
@@ -67,7 +75,7 @@ export function PasswordForm({ email }: PasswordFormProps) {
         </p>
       )}
       <AuthButton type="submit" disabled={loading}>
-        {loading ? "가입 중..." : "회원가입 완료"}
+        {loading ? "처리 중..." : "다음"}
       </AuthButton>
     </form>
   );

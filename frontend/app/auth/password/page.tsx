@@ -12,11 +12,7 @@ export default function PasswordPage() {
   }
 
   return (
-    <AuthLayout
-      title="비밀번호 설정"
-      showBack
-      backHref="/auth/verify"
-    >
+    <AuthLayout title="이메일로 시작" showBack backHref="/auth/verify">
       <PasswordForm email={email} />
     </AuthLayout>
   );

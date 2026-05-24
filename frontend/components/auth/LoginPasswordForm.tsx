@@ -26,7 +26,7 @@ export function LoginPasswordForm({ email, onBack }: LoginPasswordFormProps) {
     try {
       const result = await login(email, password);
       saveAuth(result.token, result.user.id);
-      router.push("/");
+      router.push("/profile");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "로그인에 실패했습니다.");
     } finally {

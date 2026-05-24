@@ -20,21 +20,23 @@ class SignUpSerializer(serializers.Serializer):
         return data
 
     def create(self, validated_data):
-        # 유저 생성
+        name = self.context.get('identity_name', '')
         user = User.objects.create_user(
             email=validated_data['email'],
-            password=validated_data['password']
+            password=validated_data['password'],
+            name=name,
         )
         return user
 
 
 # ModelSerializer로 필드 그대로 가져 오기
 class ProfileSerializer(serializers.ModelSerializer):
+    nickname = serializers.CharField(max_length=15, trim_whitespace=True)
+
     # ModelSerializer는 Meta 필수
-    # Meta에 등록함으로써
     class Meta:
         model = Profile
-        fields = ('id', 'nickname', 'created_at')
+        fields = ('id', 'nickname', 'created_at', 'is_adult_mode')
         read_only_fields = ('id', 'created_at')
 
 
@@ -42,7 +44,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "email", "is_subscribed", "is_adult_mode")
+        fields = ("id", "email", "is_subscribed")
         read_only_fields = fields
 
 

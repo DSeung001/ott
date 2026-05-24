@@ -18,7 +18,6 @@ export function OtpForm({ email }: OtpFormProps) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
@@ -26,8 +25,7 @@ export function OtpForm({ email }: OtpFormProps) {
     setError(null);
     setResending(true);
     try {
-      const result = await requestEmailVerification(email);
-      setMessage(result.message);
+      await requestEmailVerification(email);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "재발송에 실패했습니다.");
     } finally {
@@ -51,29 +49,26 @@ export function OtpForm({ email }: OtpFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <p className="text-sm text-[var(--auth-muted)]">
-        <span className="font-medium text-[var(--foreground)]">{email}</span>
-        로 발송된 6자리 코드를 입력하세요.
-      </p>
-      <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-        개발 모드: Django 서버 터미널에 인증번호가 출력됩니다.
-      </p>
+      <div className="space-y-3 text-center">
+        <p className="text-base font-semibold text-[var(--auth-primary)]">
+          {email}
+        </p>
+        <p className="text-sm text-[var(--auth-muted)]">
+          이메일로 발송된 인증번호 6자리를 입력해주세요.
+        </p>
+      </div>
+
       <AuthInput
         label="인증번호"
         type="text"
         inputMode="numeric"
         autoComplete="one-time-code"
-        placeholder="123456"
+        placeholder="인증번호 6자리"
         maxLength={6}
         value={code}
         onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
         required
       />
-      {message && (
-        <p className="text-sm text-emerald-600" role="status">
-          {message}
-        </p>
-      )}
       {error && (
         <p className="text-sm text-red-600" role="alert">
           {error}

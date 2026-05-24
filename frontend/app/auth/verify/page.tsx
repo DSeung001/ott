@@ -11,15 +11,12 @@ export default function VerifyPage() {
   const email = useRequireSignupEmail();
   const sentRef = useRef(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [sentMessage, setSentMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!email || sentRef.current) return;
     sentRef.current = true;
 
-    requestEmailVerification(email)
-      .then((res) => setSentMessage(res.message))
-      .catch((err) =>
+    requestEmailVerification(email).catch((err) =>
         setSendError(
           err instanceof ApiError ? err.message : "인증번호 발송에 실패했습니다.",
         ),
@@ -31,20 +28,10 @@ export default function VerifyPage() {
   }
 
   return (
-    <AuthLayout
-      title="이메일 인증"
-      subtitle="발송된 인증번호를 입력해 주세요."
-      showBack
-      backHref="/auth/identity"
-    >
+    <AuthLayout title="이메일로 시작" showBack backHref="/auth/identity">
       {sendError && (
         <p className="mb-4 text-sm text-red-600" role="alert">
           {sendError}
-        </p>
-      )}
-      {sentMessage && !sendError && (
-        <p className="mb-4 text-sm text-emerald-600" role="status">
-          {sentMessage}
         </p>
       )}
       <OtpForm email={email} />

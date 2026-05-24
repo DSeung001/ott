@@ -1,7 +1,7 @@
 from django.urls import path, include
 
 from .views import EmailVerificationRequest, EmailVerificationConfirm, IdentityVerificationMockView, SignUpView, \
-    MyProfileView, EmailSignUpCheck, LoginView, LogoutView
+    ProfilesView, EmailSignUpCheck, LoginView, LogoutView, ProfileDetailView
 
 app_name = "users"
 
@@ -13,7 +13,8 @@ v1_patterns = [
     path('authentications/signup/', SignUpView.as_view(), name='signup'),
     path('authentications/login/', LoginView.as_view(), name='login'),
     path('authentications/logout/', LogoutView.as_view(), name='logout'),
-    path('profiles/', MyProfileView.as_view(), name='my_profile'),
+    path('profiles/', ProfilesView.as_view(), name='profiles'),
+    path('profiles/<int:pk>/', ProfileDetailView.as_view(), name='profiles_detail'),
 ]
 
 urlpatterns = [

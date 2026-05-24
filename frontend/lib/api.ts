@@ -1,3 +1,5 @@
+import { getAuthHeader } from "./auth-storage";
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -27,6 +29,23 @@ function extractErrorMessage(body: unknown): string {
     if (Array.isArray(value) && value[0]) return String(value[0]);
   }
   return "요청에 실패했습니다.";
+}
+
+export async function authFetch<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const token = getAuthHeader();
+  if (!token) {
+    throw new ApiError("로그인이 필요합니다.", 401);
+  }
+  return apiFetch<T>(path, {
+    ...options,
+    headers: {
+      ...(options.headers ?? {}),
+      Authorization: token,
+    },
+  });
 }
 
 export async function apiFetch<T>(
