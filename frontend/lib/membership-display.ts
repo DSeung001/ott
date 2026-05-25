@@ -3,12 +3,16 @@ import {
   type MembershipPlan,
   type MembershipPlanId,
 } from "@/lib/membership-plans";
-import type { MembershipPlanRecord } from "@/lib/membership-api";
+import type {
+  MembershipPlanRecord,
+  SubscriptionRecord,
+} from "@/lib/membership-api";
 
 export type DisplayMembershipPlan = MembershipPlan & {
   apiId: number;
   monthlyPrice: number;
   isCurrent?: boolean;
+  isPending?: boolean;
 };
 
 const CODE_LABEL: Record<string, string> = {
@@ -23,13 +27,40 @@ export function getMembershipDisplayName(
   return CODE_LABEL[code] ?? fallback ?? code;
 }
 
+function parseBillingDate(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** manage 페이지: YYYY.MM.DD */
+export function formatBillingDateDot(iso: string | null | undefined): string {
+  const date = parseBillingDate(iso);
+  if (!date) return "—";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}.${m}.${d}`;
+}
+
+/** 플랜 카드용: "6월 8일 결제 예정" */
+export function formatNextBillingLabel(
+  iso: string | null | undefined,
+): string {
+  const date = parseBillingDate(iso);
+  if (!date) return "결제 예정일 없음";
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 결제 예정`;
+}
+
 export function enrichMembershipPlans(
   apiPlans: MembershipPlanRecord[],
-  current: MembershipPlanRecord | null,
+  subscription: SubscriptionRecord | null,
 ): DisplayMembershipPlan[] {
+  const currentId = subscription?.membership.id ?? null;
+  const pendingId = subscription?.pending_membership?.id ?? null;
+
   return apiPlans.map((apiPlan) => {
     const local = MEMBERSHIP_PLANS.find((p) => p.id === apiPlan.code);
-    const currentId = current?.id ?? null;
 
     return {
       apiId: apiPlan.id,
@@ -40,23 +71,7 @@ export function enrichMembershipPlans(
       recommended: local?.recommended,
       features: local?.features ?? [],
       isCurrent: currentId === apiPlan.id,
+      isPending: pendingId === apiPlan.id,
     };
   });
-}
-
-/** 결제 예정일 UI용 (백엔드 미제공 시 클라이언트 목업) */
-export function getMockNextBillingDate(): string {
-  const date = new Date();
-  date.setMonth(date.getMonth() + 1);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}.${m}.${d}`;
-}
-
-/** 플랜 카드용: "6월 8일 결제 예정" */
-export function getNextBillingLabel(): string {
-  const date = new Date();
-  date.setMonth(date.getMonth() + 1);
-  return `${date.getMonth() + 1}월 ${date.getDate()}일 결제 예정`;
 }

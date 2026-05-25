@@ -7,7 +7,7 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from users.constants import AUTH_TOKEN_TTL_DAYS, DEFAULT_AVATAR_FILE
+from users.constants import AUTH_TOKEN_TTL_DAYS, DEFAULT_AVATAR_FILE, MembershipCode, SubscriptionStatus, PaymentStatus
 
 
 # https://docs.djangoproject.com/en/6.0/topics/auth/customizing/
@@ -29,12 +29,7 @@ class CustomUserManager(BaseUserManager):
 
 
 class Membership(models.Model):
-    CODE_CHOICES = [
-        ("basic", "베이직"),
-        ("premium", "프리미엄"),
-    ]
-
-    code = models.SlugField(max_length=32, choices=CODE_CHOICES, unique=True, db_index=True)
+    code = models.SlugField(max_length=32, choices=MembershipCode.choices, unique=True, db_index=True)
     price = models.PositiveIntegerField()
 
     class Meta:
@@ -48,14 +43,6 @@ class User(AbstractUser):
     username = None
     first_name = None
     last_name = None
-
-    membership = models.ForeignKey(
-        Membership,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='subscribers',
-    )
 
     name = models.CharField(max_length=32)
     email = models.EmailField(
@@ -73,6 +60,62 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class Subscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    membership = models.ForeignKey(Membership, on_delete=models.CASCADE, related_name='subscriptions')
+    status = models.CharField(max_length=32, choices=SubscriptionStatus.choices, default=SubscriptionStatus.ACTIVE)
+
+    started_at = models.DateTimeField()  # 구독 시작점
+    next_billing_at = models.DateTimeField(null=True, blank=True)  # 다음 결제일
+    end_at = models.DateTimeField(null=True, blank=True)  # 종료 접수
+    ended_at = models.DateTimeField(null=True, blank=True)  # 실제 서비스 종료 시각
+    created_at = models.DateTimeField(auto_now_add=True)
+    pending_membership = models.ForeignKey(
+        Membership,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pending_subscriptions',
+    ) # 다음 멤버쉽
+
+    class Meta:
+        ordering = ('-started_at',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(status='active'),
+                name="unique_active_subscription_per_user",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.email}- {self.membership.code} {self.status}"
+
+
+class Payment(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='payments',
+    )
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='payments'
+    )
+    amount = models.PositiveIntegerField()
+    status = models.CharField(max_length=32, choices=PaymentStatus.choices, default=PaymentStatus.PAID, db_index=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    refund_at = models.DateTimeField(null=True, blank=True)
+    # 외부 결제 모듈 연동
+    pg_payment_id = models.CharField(max_length=128, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-created_at',)
 
 
 class Profile(models.Model):

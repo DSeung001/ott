@@ -7,8 +7,7 @@ export type EmailCheckStatus = "AVAILABLE" | "EXIST";
 export type ApiUser = {
     id: number;
     email: string;
-    is_subscribed: boolean;
-    is_adult_mode: boolean;
+    name: string;
 };
 
 export type AuthSuccessResponse = {

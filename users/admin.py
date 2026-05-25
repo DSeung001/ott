@@ -6,5 +6,4 @@ User = get_user_model()
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("id", "email", "membership", "name")
-    list_filter = ("membership",)
+    list_display = ("id", "email", "name")

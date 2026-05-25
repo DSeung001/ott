@@ -1,6 +1,10 @@
 import random
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.utils import timezone
+
+
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -16,11 +20,20 @@ from users.constants import (
     IDENTITY_VERIFIED_TIMEOUT,
     get_auth_code_cache_key,
     get_email_verified_cache_key,
-    get_identity_verified_cache_key,
+    get_identity_verified_cache_key, SubscriptionStatus,
 )
 from users.models import Profile, Membership
-from users.serializers import SignUpSerializer, ProfileSerializer, UserSerializer, LoginSerializer, \
-    MembershipSerializer, SubscribeMembershipSerializer
+from users.serializers import (
+    SignUpSerializer,
+    ProfileSerializer,
+    UserSerializer,
+    LoginSerializer,
+    MembershipSerializer,
+    SubscriptionSerializer,
+    SubscriptionCreateSerializer,
+    SubscriptionPlanChangeSerializer,
+)
+from users.subscription import get_current_subscription
 
 User = get_user_model()
 
@@ -255,25 +268,88 @@ class MembershipView(APIView):
         plans = Membership.objects.all().order_by("price")
         return Response({
             "plans": MembershipSerializer(plans, many=True).data,
-            "current": MembershipSerializer(request.user.membership).data if request.user.membership else None,
-            "is_subscribed": request.user.membership_id is not None,
         })
 
+class SubscriptionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    # 현재 구독 여부
+    def get(self, request):
+        sub = get_current_subscription(request.user)
+        return Response({
+            "is_subscribed": sub is not None,
+            "subscription": SubscriptionSerializer(sub).data if sub else None,
+        })
+
+    # 구독 하기
     def post(self, request):
-        serializer = SubscribeMembershipSerializer(data=request.data, context={'request': request})
+        serializer = SubscriptionCreateSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            subscription = serializer.save()
+
+        return Response(
+            {
+                "message": "멤버십이 적용되었습니다.",
+                "is_subscribed": True,
+                "subscription": SubscriptionSerializer(subscription).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    # 구독 변경
+    def patch(self, request):
+        sub = get_current_subscription(request.user)
+        if not sub:
+            return Response({"error": "구독 중이 아닙니다."}, status=400)
+
+        # instance가 있어야 update로 흐름
+        # 없으면 create를 찾음
+        serializer = SubscriptionPlanChangeSerializer(
+            instance=sub,
+            data=request.data,
+            context={"request": request},
+        )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        user = serializer.save()
+        # save가 내부에서 update, create를 찾음
+        subscription = serializer.save()
+        pending = subscription.pending_membership
+        pending_name = pending.code if pending else ""
         return Response({
-            "message": "멤버십이 적용되었습니다.",
-            "membership": MembershipSerializer(user.membership).data,
+            "message": f"다음 결제일부터 {pending_name} 플랜이 적용됩니다.",
             "is_subscribed": True,
-        }, status=status.HTTP_200_OK)
+            "subscription": SubscriptionSerializer(subscription).data,
+        })
 
+    # 구독 해제
     def delete(self, request):
-        request.user.membership = None
-        request.user.save(update_fields=["membership"])
+        sub = get_current_subscription(request.user)
+        if not sub:
+            return Response(
+                {"error": "구독 중이 아닙니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        now = timezone.now()
+        sub.status = SubscriptionStatus.ENDED
+        sub.ended_at = now
+        sub.next_billing_at = None
+        sub.pending_membership = None
+        sub.end_at = None
+        sub.save(
+            update_fields=[
+                "status",
+                "ended_at",
+                "next_billing_at",
+                "pending_membership",
+                "end_at",
+            ]
+        )
         return Response({
             "message": "멤버십이 해지되었습니다.",
             "is_subscribed": False,

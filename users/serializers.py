@@ -1,7 +1,9 @@
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from users.models import Profile, Membership
+from users.constants import SubscriptionStatus, PaymentStatus
+from users.models import Profile, Membership, Subscription, Payment
 
 User = get_user_model()
 
@@ -61,31 +63,11 @@ class MembershipSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-# 멤버쉽 구독
-class SubscribeMembershipSerializer(serializers.Serializer):
-    # membership_id가 오면 그 값을 기준으로 객체를 찾음
-    # queryset으로 범위 지정
-    membership_id = serializers.PrimaryKeyRelatedField(
-        queryset=Membership.objects.all(),
-    )
-
-    # serializer.is_valid 후 save 호출 시 실행
-    def save(self, **kwargs):
-        user = self.context["request"].user
-        # PrimaryKeyRelatedField로 넘어온 값이 존재
-        membership = self.validated_data["membership_id"]
-        user.membership = membership
-        user.save(update_fields=["membership"])
-        return user
-
-
 # 유저 관련
 class UserSerializer(serializers.ModelSerializer):
-    membership = MembershipSerializer(read_only=True)
-
     class Meta:
         model = User
-        fields = ("id", "email", "membership")
+        fields = ("id", "email", "name")
         read_only_fields = fields
 
 
@@ -105,3 +87,103 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("이메일 또는 비밀번호가 올바르지 않습니다.")
         data["user"] = user
         return data
+
+
+# 구독 (엔티티 응답)
+class SubscriptionSerializer(serializers.ModelSerializer):
+    membership = MembershipSerializer(read_only=True)
+    pending_membership = MembershipSerializer(read_only=True)
+    subscribed_days = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Subscription
+        fields = (
+            "id",
+            "status",
+            "started_at",
+            "next_billing_at",
+            "end_at",
+            "ended_at",
+            "membership",
+            "pending_membership",
+            "subscribed_days",
+        )
+        read_only_fields = fields
+
+    def get_subscribed_days(self, obj):
+        if not obj.started_at:
+            return 0
+        delta = timezone.now() - obj.started_at
+        return max(delta.days + 1, 1)
+
+
+# 구독 시작 (POST)
+class SubscriptionCreateSerializer(serializers.Serializer):
+    membership_id = serializers.PrimaryKeyRelatedField(
+        queryset=Membership.objects.all(),
+    )
+
+    def validate(self, attrs):
+        user = self.context.get("request").user
+        active = (
+            user.subscriptions.filter(
+                status__in=[
+                    SubscriptionStatus.ACTIVE,
+                    SubscriptionStatus.CANCEL_SCHEDULED,
+                ]
+            ).exists()
+        )
+
+        if active:
+            raise serializers.ValidationError(
+                "이미 구독 중입니다."
+            )
+        return attrs
+
+    def create(self, validated_data):
+        from datetime import timedelta
+
+        user = self.context["request"].user
+        membership = validated_data["membership_id"]
+        now = timezone.now()
+
+        subscription = Subscription.objects.create(
+            user=user,
+            membership=membership,
+            status=SubscriptionStatus.ACTIVE,
+            started_at=now,
+            next_billing_at=now + timedelta(days=30),
+        )
+        # todo: 스케줄링으로 결제되고 기록 쌓이게 해야함
+        Payment.objects.create(
+            user=user,
+            subscription=subscription,
+            amount=membership.price,
+            status=PaymentStatus.PAID,
+            paid_at=now,
+        )
+        return subscription
+
+# 플랜 변경 예약 (PATCH, 다음 결제일부터)
+class SubscriptionPlanChangeSerializer(serializers.Serializer):
+    membership_id = serializers.PrimaryKeyRelatedField(
+        queryset=Membership.objects.all(),
+    )
+
+    def validate(self, attrs):
+        user = self.context.get("request").user
+        new_membership = attrs["membership_id"]
+        sub = self.instance
+        if not sub:
+            raise serializers.ValidationError("활성 구독이 없습니다.")
+        if sub.membership_id == new_membership.id:
+            raise serializers.ValidationError("이미 이용 중인 플랜입니다.")
+        attrs["new_membership"] = new_membership
+        return attrs
+
+    def update(self, instance, validated_data):
+        instance.pending_membership = validated_data["new_membership"]
+        instance.save(update_fields=["pending_membership"])
+        return instance
+
+

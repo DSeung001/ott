@@ -2,19 +2,24 @@
 
 import Link from "next/link";
 import { AuthButton } from "@/components/auth/AuthButton";
-import { getNextBillingLabel } from "@/lib/membership-display";
 import { formatKrw } from "@/lib/membership-plans";
 import type { DisplayMembershipPlan } from "@/lib/membership-display";
 
 type MembershipPlanCardProps = {
   plan: DisplayMembershipPlan;
   subscribing?: boolean;
-  onSubscribe: (membershipId: number) => void;
+  isSubscribed?: boolean;
+  nextBillingLabel?: string;
+  dense?: boolean;
+  onPlanAction: (membershipId: number) => void;
 };
 
 /** 카드 하단 액션 영역 높이 통일 */
-const ACTION_BLOCK_CLASS =
-  "mt-8 flex min-h-[7.25rem] flex-col items-center justify-end";
+function actionBlockClass(dense: boolean) {
+  return dense
+    ? "mt-5 flex min-h-[5.5rem] flex-col items-center justify-end"
+    : "mt-8 flex min-h-[7.25rem] flex-col items-center justify-end";
+}
 
 function CheckIcon() {
   return (
@@ -34,18 +39,35 @@ function CheckIcon() {
 export function MembershipPlanCard({
   plan,
   subscribing = false,
-  onSubscribe,
+  isSubscribed = false,
+  nextBillingLabel,
+  dense = false,
+  onPlanAction,
 }: MembershipPlanCardProps) {
-  const isRecommended = plan.recommended && !plan.isCurrent;
+  const isRecommended = plan.recommended && !plan.isCurrent && !plan.isPending;
+  const actionDisabled =
+    subscribing || plan.isCurrent || (plan.isPending ?? false);
+
+  const actionLabel = plan.isCurrent
+    ? null
+    : plan.isPending
+      ? "다음 결제부터 적용 예정"
+      : isSubscribed
+        ? `${plan.name}으로 변경`
+        : `${plan.name} 시작하기`;
 
   return (
     <article
-      className={`relative flex h-full flex-col rounded-2xl border bg-white p-6 shadow-sm ${
+      className={`relative flex h-full flex-col rounded-2xl border bg-white shadow-sm ${
+        dense ? "p-5" : "p-6"
+      } ${
         plan.isCurrent
           ? "border-[var(--auth-primary)] ring-2 ring-[var(--auth-primary)]/20"
-          : isRecommended
-            ? "border-[var(--auth-primary)] ring-2 ring-[var(--auth-primary)]/20"
-            : "border-[var(--auth-border)]"
+          : plan.isPending
+            ? "border-amber-500 ring-2 ring-amber-500/20"
+            : isRecommended
+              ? "border-[var(--auth-primary)] ring-2 ring-[var(--auth-primary)]/20"
+              : "border-[var(--auth-border)]"
       }`}
     >
       {plan.isCurrent && (
@@ -53,7 +75,12 @@ export function MembershipPlanCard({
           이용 중
         </span>
       )}
-      {!plan.isCurrent && isRecommended && (
+      {!plan.isCurrent && plan.isPending && (
+        <span className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">
+          다음 결제부터 적용
+        </span>
+      )}
+      {!plan.isCurrent && !plan.isPending && isRecommended && (
         <span className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-[var(--auth-primary)] px-3 py-1 text-xs font-semibold text-white">
           추천
         </span>
@@ -75,7 +102,9 @@ export function MembershipPlanCard({
         <p className="mt-1 text-sm text-[var(--auth-subtle)]">/월</p>
       </div>
 
-      <ul className="mt-8 flex-1 space-y-3">
+      <ul
+        className={`flex-1 ${dense ? "mt-5 space-y-2" : "mt-8 space-y-3"}`}
+      >
         {plan.features.map((feature) => (
           <li key={feature} className="flex items-start gap-2 text-sm">
             <CheckIcon />
@@ -84,28 +113,32 @@ export function MembershipPlanCard({
         ))}
       </ul>
 
-      <div className={ACTION_BLOCK_CLASS}>
+      <div className={actionBlockClass(dense)}>
         {plan.isCurrent ? (
           <>
             <p className="text-center text-sm font-medium text-[var(--auth-muted)]">
-              {getNextBillingLabel()}
+              {nextBillingLabel ?? "결제 예정일 없음"}
             </p>
             <Link
               href="/membership/manage"
-              className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-[var(--auth-border-strong)] bg-white px-4 py-3.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--auth-page-bg)]"
+              className="mt-2 inline-flex w-full max-w-[220px] items-center justify-center self-center rounded-lg border border-[var(--auth-border-strong)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--auth-page-bg)]"
             >
               내 멤버십 관리
             </Link>
           </>
+        ) : plan.isPending ? (
+          <p className="text-center text-sm font-medium text-amber-700">
+            다음 결제일부터 이 플랜이 적용됩니다
+          </p>
         ) : (
           <AuthButton
             type="button"
             variant={isRecommended ? "primary" : "secondary"}
             className="w-full"
-            disabled={subscribing}
-            onClick={() => onSubscribe(plan.apiId)}
+            disabled={actionDisabled}
+            onClick={() => onPlanAction(plan.apiId)}
           >
-            {subscribing ? "처리 중..." : `${plan.name} 시작하기`}
+            {subscribing ? "처리 중..." : actionLabel}
           </AuthButton>
         )}
       </div>
