@@ -18,8 +18,9 @@ from users.constants import (
     get_email_verified_cache_key,
     get_identity_verified_cache_key,
 )
-from users.models import Profile
-from users.serializers import SignUpSerializer, ProfileSerializer, UserSerializer, LoginSerializer
+from users.models import Profile, Membership
+from users.serializers import SignUpSerializer, ProfileSerializer, UserSerializer, LoginSerializer, \
+    MembershipSerializer, SubscribeMembershipSerializer
 
 User = get_user_model()
 
@@ -244,3 +245,36 @@ class LogoutView(APIView):
         if key:
             remove_session_token(key)
         return Response({"message": "로그아웃되었습니다."})
+
+
+# 멤버쉽
+class MembershipView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        plans = Membership.objects.all().order_by("price")
+        return Response({
+            "plans": MembershipSerializer(plans, many=True).data,
+            "current": MembershipSerializer(request.user.membership).data if request.user.membership else None,
+            "is_subscribed": request.user.membership_id is not None,
+        })
+
+    def post(self, request):
+        serializer = SubscribeMembershipSerializer(data=request.data, context={'request': request})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.save()
+        return Response({
+            "message": "멤버십이 적용되었습니다.",
+            "membership": MembershipSerializer(user.membership).data,
+            "is_subscribed": True,
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        request.user.membership = None
+        request.user.save(update_fields=["membership"])
+        return Response({
+            "message": "멤버십이 해지되었습니다.",
+            "is_subscribed": False,
+        })

@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from users.models import Profile
+from users.models import Profile, Membership
 
 User = get_user_model()
 
@@ -31,7 +31,7 @@ class SignUpSerializer(serializers.Serializer):
 
 # ModelSerializer로 필드 그대로 가져 오기
 class ProfileSerializer(serializers.ModelSerializer):
-    nickname = serializers.CharField(max_length=15, trim_whitespace=True)
+    nickname = serializers.CharField(max_length=16, trim_whitespace=True)
     avatar_file = serializers.CharField(max_length=40)
 
     class Meta:
@@ -52,11 +52,40 @@ class ProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("지원하지 않는 이미지 형식입니다. (png, webp, jpg, jpeg만 가능)")
         return value
 
+
+# 멤버쉽 목록용
+class MembershipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Membership
+        fields = ("id", "code", "price")
+        read_only_fields = fields
+
+
+# 멤버쉽 구독
+class SubscribeMembershipSerializer(serializers.Serializer):
+    # membership_id가 오면 그 값을 기준으로 객체를 찾음
+    # queryset으로 범위 지정
+    membership_id = serializers.PrimaryKeyRelatedField(
+        queryset=Membership.objects.all(),
+    )
+
+    # serializer.is_valid 후 save 호출 시 실행
+    def save(self, **kwargs):
+        user = self.context["request"].user
+        # PrimaryKeyRelatedField로 넘어온 값이 존재
+        membership = self.validated_data["membership_id"]
+        user.membership = membership
+        user.save(update_fields=["membership"])
+        return user
+
+
 # 유저 관련
 class UserSerializer(serializers.ModelSerializer):
+    membership = MembershipSerializer(read_only=True)
+
     class Meta:
         model = User
-        fields = ("id", "email", "is_subscribed")
+        fields = ("id", "email", "membership")
         read_only_fields = fields
 
 

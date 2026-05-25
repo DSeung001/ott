@@ -28,19 +28,41 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
+class Membership(models.Model):
+    CODE_CHOICES = [
+        ("basic", "베이직"),
+        ("premium", "프리미엄"),
+    ]
+
+    code = models.SlugField(max_length=32, choices=CODE_CHOICES, unique=True, db_index=True)
+    price = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ('price',)
+
+    def __str__(self):
+        return self.code
+
+
 class User(AbstractUser):
     username = None
     first_name = None
     last_name = None
 
-    name = models.CharField(max_length=31)
+    membership = models.ForeignKey(
+        Membership,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='subscribers',
+    )
+
+    name = models.CharField(max_length=32)
     email = models.EmailField(
         verbose_name="email address",
         max_length=255,
         unique=True,
     )
-    is_subscribed = models.BooleanField(default=False)
-
     USERNAME_FIELD = 'email'
 
     # email이 기본 포함
@@ -55,7 +77,7 @@ class User(AbstractUser):
 
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='profiles')
-    nickname = models.CharField(max_length=15)
+    nickname = models.CharField(max_length=16)
     avatar_file = models.CharField(max_length=64, default=DEFAULT_AVATAR_FILE)
     is_adult_mode = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

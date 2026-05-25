@@ -161,7 +161,10 @@ export function ProfileMenu() {
               }
               label="OTT 멤버십"
               trailing="베이직"
-              onClick={() => alert("멤버십은 준비 중입니다.")}
+              onClick={() => {
+                setOpen(false);
+                router.push("/membership/subscribed");
+              }}
             />
           </div>
 
