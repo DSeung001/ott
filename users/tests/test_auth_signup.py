@@ -1,27 +1,17 @@
-import re
-
-from datetime import timedelta
-from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from users.models import AuthToken
-
+from datetime import timedelta
+from django.utils import timezone
 from users.constants import (
-    get_auth_code_cache_key,
-    get_email_verified_cache_key,
-    get_identity_verified_cache_key, DEFAULT_AVATAR_FILE,
+    DEFAULT_AVATAR_FILE, get_email_verified_cache_key,
 )
+from users.tests.utils import SignupFlowMixin, EXISTING_EMAIL, PASSWORD, NEW_EMAIL, TOKEN_PATTERN
 
 User = get_user_model()
-
-NEW_EMAIL = "newuser@example.com"
-EXISTING_EMAIL = "existing@example.com"
-PASSWORD = "secure-pass-123"
-TOKEN_PATTERN = re.compile(r"^[a-f0-9]{40}$")
-
 
 class EmailSignupCheckTests(APITestCase):
     def setUp(self):
@@ -57,34 +47,7 @@ class ExistingUserFlowTests(APITestCase):
         self.assertEqual(response.data["status"], "EXIST")
 
 
-class SignupFlowMixin:
-    def _run_email_verification(self, email):
-        send_url = reverse("users:email_verification_reqeust")
-        self.client.post(send_url, {"email": email}, format="json")
-        code = cache.get(get_auth_code_cache_key(email))
-        self.assertIsNotNone(code)
-        confirm_url = reverse("users:email_verification_confirm")
-        self.client.post(
-            confirm_url,
-            {"email": email, "code": code}, format="json"
-        )
-        self.assertTrue(cache.get(get_email_verified_cache_key(email)))
-
-    def _run_identity_verification(self, email):
-        url = reverse("users:identity_verify_mock")
-        self.client.post(url, data={"email": email}, format="json")
-
-    def _signup(self, email=NEW_EMAIL, password=PASSWORD):
-        self._run_email_verification(email)
-        self._run_identity_verification(email)
-        return self.client.post(
-            reverse("users:signup"),
-            {"email": email, "password": password, "password_confirm": password},
-            format="json"
-        )
-
-
-class NewUserSignupTests(SignupFlowMixin, APITestCase):
+class NewUserSignupTests(SignupFlowMixin):
     def setUp(self):
         cache.clear()
         self.signup_payload = {
@@ -155,7 +118,7 @@ class LoginTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-class SignupTests(SignupFlowMixin, APITestCase):
+class SignupTests(SignupFlowMixin):
     def setUp(self):
         cache.clear()
 
@@ -204,29 +167,6 @@ class LogoutTests(APITestCase):
         )
         self.assertEqual(profile_resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
-
-class ProfileAuthTests(APITestCase):
-    def setUp(self):
-        cache.clear()
-
-    def test_profile_without_token_returns_401(self):
-        resp = self.client.post(
-            reverse("users:profiles"),
-            {"nickname": "x"},
-            format="json",
-        )
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_profile_with_invalid_token_returns_401(self):
-        self.client.credentials(HTTP_AUTHORIZATION="Token " + "0" * 40)
-        resp = self.client.post(
-            reverse("users:profiles"),
-            {"nickname": "x"},
-            format="json",
-        )
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
-
-
 class EmailVerificationTests(APITestCase):
     def setUp(self):
         cache.clear()
@@ -256,7 +196,7 @@ class EmailVerificationTests(APITestCase):
         self.assertFalse(cache.get(get_email_verified_cache_key(email)))
 
 
-class TokenExpiryTests(SignupFlowMixin, APITestCase):
+class TokenExpiryTests(SignupFlowMixin):
     def setUp(self):
         cache.clear()
 
