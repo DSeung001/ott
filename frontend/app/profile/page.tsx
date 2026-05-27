@@ -74,6 +74,7 @@ function ProfilePageContent() {
         id: result.profile.id,
         nickname: result.profile.nickname,
         avatar_file: result.profile.avatar_file,
+        is_adult_mode: result.profile.is_adult_mode,
       };
       addProfile(userId, cached);
       loadProfiles();

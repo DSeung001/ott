@@ -34,7 +34,7 @@ class SignUpSerializer(serializers.Serializer):
 # ModelSerializer로 필드 그대로 가져 오기
 class ProfileSerializer(serializers.ModelSerializer):
     nickname = serializers.CharField(max_length=16, trim_whitespace=True)
-    avatar_file = serializers.CharField(max_length=40)
+    avatar_file = serializers.CharField(max_length=64)
 
     class Meta:
         model = Profile

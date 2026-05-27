@@ -12,7 +12,7 @@ from users.models import AuthToken
 from users.constants import (
     get_auth_code_cache_key,
     get_email_verified_cache_key,
-    get_identity_verified_cache_key,
+    get_identity_verified_cache_key, DEFAULT_AVATAR_FILE,
 )
 
 User = get_user_model()
@@ -124,10 +124,10 @@ class NewUserSignupTests(SignupFlowMixin, APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {response.data['token']}")
         profile_response = self.client.post(
             reverse("users:profiles"),
-            {"nickname": "테스트"},
+            {"nickname": "테스트", "avatar_file": DEFAULT_AVATAR_FILE, "is_adult_mode":True},
             format="json",
         )
-        self.assertEqual(profile_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(profile_response.status_code, status.HTTP_201_CREATED, profile_response.data)
         self.assertEqual(profile_response.data["profile"]["nickname"], "테스트")
 
 

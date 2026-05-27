@@ -8,7 +8,6 @@ http://localhost:3000/auth/login
 
 ```bash
 cd frontend
-cp .env.local.example .env.local
 npm install
 npm run dev
 ```

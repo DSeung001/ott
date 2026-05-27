@@ -11,6 +11,7 @@ export type ProfileRecord = {
 export type UpdateProfilePayload = {
   nickname?: string;
   avatar_file?: string;
+  is_adult_mode?: boolean;
 };
 
 export async function getProfile(

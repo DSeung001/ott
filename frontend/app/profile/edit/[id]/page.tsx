@@ -49,6 +49,8 @@ export default function ProfileEditPage() {
   const [avatarFile, setAvatarFile] = useState<AvatarFile>(DEFAULT_AVATAR_FILE);
   const [initialAvatarFile, setInitialAvatarFile] =
     useState<AvatarFile>(DEFAULT_AVATAR_FILE);
+  const [isAdultMode, setIsAdultMode] = useState(false);
+  const [initialAdultMode, setInitialAdultMode] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,9 +82,12 @@ export default function ProfileEditPage() {
         setInitialNickname(profile.nickname);
         setAvatarFile(file);
         setInitialAvatarFile(file);
+        setIsAdultMode(profile.is_adult_mode);
+        setInitialAdultMode(profile.is_adult_mode);
         updateProfileInCache(userId, profileId, {
           nickname: profile.nickname,
           avatar_file: profile.avatar_file,
+          is_adult_mode: profile.is_adult_mode,
         });
       } catch {
         if (cancelled) return;
@@ -91,6 +96,8 @@ export default function ProfileEditPage() {
         setInitialNickname(cached.nickname);
         setAvatarFile(file);
         setInitialAvatarFile(file);
+        setIsAdultMode(!!cached.is_adult_mode);
+        setInitialAdultMode(!!cached.is_adult_mode);
       } finally {
         if (!cancelled) setLoaded(true);
       }
@@ -122,16 +129,24 @@ export default function ProfileEditPage() {
 
     setSaving(true);
     setError(null);
+
     try {
-      const result = await updateProfile(profileId, {
-        nickname: trimmed,
-        avatar_file: avatarFile,
-      });
+      const payload: {
+        nickname?: string;
+        avatar_file?: AvatarFile;
+        is_adult_mode?: boolean;
+      } = {};
+      if (nicknameChanged) payload.nickname = trimmed;
+      if (avatarChanged) payload.avatar_file = avatarFile;
+      if (adultChanged) payload.is_adult_mode = isAdultMode;
+
+      const result = await updateProfile(profileId, payload);
       const { profile } = result;
 
       updateProfileInCache(userId, profileId, {
         nickname: profile.nickname,
         avatar_file: profile.avatar_file,
+        is_adult_mode: profile.is_adult_mode,
       });
 
       const selected = getSelectedProfile();
@@ -142,6 +157,13 @@ export default function ProfileEditPage() {
           profile.avatar_file,
         );
       }
+
+      setInitialNickname(profile.nickname);
+      const nextAvatar = resolveAvatarFile(profile.avatar_file);
+      setInitialAvatarFile(nextAvatar);
+      setAvatarFile(nextAvatar);
+      setInitialAdultMode(profile.is_adult_mode);
+      setIsAdultMode(profile.is_adult_mode);
 
       router.push("/profile?edit=1");
     } catch (err) {
@@ -157,11 +179,12 @@ export default function ProfileEditPage() {
   const trimmed = nickname.trim();
   const nicknameChanged = trimmed !== initialNickname.trim();
   const avatarChanged = avatarFile !== initialAvatarFile;
+  const adultChanged = isAdultMode !== initialAdultMode;
   const canSave =
     loaded &&
     trimmed.length > 0 &&
     trimmed.length <= PROFILE_NICKNAME_MAX_LENGTH &&
-    (nicknameChanged || avatarChanged) &&
+    (nicknameChanged || avatarChanged || adultChanged) &&
     !saving;
 
   if (!ready || Number.isNaN(profileId) || !loaded) {
@@ -223,30 +246,55 @@ export default function ProfileEditPage() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => alert("연령 제한 설정은 준비 중입니다.")}
-          className="mt-6 flex w-full items-center gap-4 border-b border-[var(--auth-border)] py-5 text-left transition hover:bg-white"
-        >
+        <div className="mt-6 flex w-full items-center gap-4 border-b border-[var(--auth-border)] py-5">
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-[var(--foreground)]">
+            <p
+              className="font-medium text-[var(--foreground)]"
+              id="profile-adult-heading"
+            >
               콘텐츠 연령 제한
             </p>
-            <p className="mt-1 text-sm text-[var(--auth-muted)]">
-              19세 연령 콘텐츠까지 시청 가능
+            <p
+              className="mt-1 text-sm text-[var(--auth-muted)]"
+              id="profile-adult-desc"
+            >
+              {isAdultMode
+                ? "19세 이용 등급 콘텐츠까지 시청할 수 있습니다."
+                : "청소년 이용 등급 콘텐츠만 시청할 수 있습니다."}
             </p>
           </div>
-          <svg
-            className="h-5 w-5 shrink-0 text-[var(--auth-subtle)]"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden
-          >
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-        </button>
+          <label className="relative inline-flex shrink-0 cursor-pointer items-center rounded-md focus-within:ring-2 focus-within:ring-[var(--auth-primary)] focus-within:ring-offset-2">
+            <span className="sr-only">19세 이용 등급 콘텐츠 시청 허용</span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={isAdultMode}
+              onChange={(e) => {
+                setIsAdultMode(e.target.checked);
+                setError(null);
+              }}
+              aria-checked={isAdultMode}
+              aria-labelledby="profile-adult-heading"
+              aria-describedby="profile-adult-desc"
+              className="sr-only"
+            />
+            <span
+              className={
+                "flex h-7 w-[2.875rem] items-center rounded-full px-[3px] transition-colors " +
+                (isAdultMode
+                  ? "bg-[var(--auth-primary)]"
+                  : "bg-[var(--auth-border-strong)]")
+              }
+            >
+              <span
+                className={
+                  "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform " +
+                  (isAdultMode ? "translate-x-[1.125rem]" : "translate-x-0")
+                }
+              />
+            </span>
+          </label>
+        </div>
 
         {error && (
           <p className="mt-4 text-sm text-red-600" role="alert">
