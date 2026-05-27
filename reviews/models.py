@@ -14,9 +14,9 @@ class Review(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    season = models.ForeignKey('contents.Season', on_delete=models.CASCADE, null=True, blank=True,
+    season = models.ForeignKey('media.Season', on_delete=models.CASCADE, null=True, blank=True,
                                related_name='season_reviews')
-    video = models.ForeignKey('contents.Video', on_delete=models.CASCADE, null=True, blank=True,
+    video = models.ForeignKey('media.Video', on_delete=models.CASCADE, null=True, blank=True,
                               related_name='video_reviews')
 
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')

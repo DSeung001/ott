@@ -44,8 +44,8 @@ INSTALLED_APPS = [
 
     # Local Apps
     'users',
-    'contents',
-    'streams',
+    'media',
+    'watching',
     'reviews',
 ]
 

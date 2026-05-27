@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from contents.models import Video
+from media.models import Video
 
 
 class WatchingHistory(models.Model):

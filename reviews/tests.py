@@ -5,9 +5,9 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg
 from django.test import TestCase
 
-from contents.models import Series, Season, Video
+from media.models import Series, Season, Video
 from reviews.models import Review
-from streams.models import WatchingHistory
+from watching.models import WatchingHistory
 
 User = get_user_model()
 
