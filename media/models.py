@@ -1,5 +1,8 @@
 from django.db import models
 
+from media.constants import ProcessingStatus, TranscodeJobStatus
+
+
 class Genre(models.Model):
     name = models.CharField(max_length=63, unique=True)
     def __str__(self):
@@ -44,14 +47,59 @@ class Season(models.Model):
             models.UniqueConstraint(fields=['series', 'name'], name='unique_season_per_series')
         ]
 
-class Video(models.Model):
-    season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='videos')
+def video_source_upload_to(instance, filename):
+    return f'videos/source/{instance.pk or "tmp"}/{filename}'
 
+class Video(models.Model):
     name = models.CharField(max_length=255)
-    video_url = models.URLField()
-    duration_seconds = models.PositiveIntegerField() # 초 단위
+
+    source_file = models.FileField(upload_to=video_source_upload_to, null=True, blank=True)
+    processing_status = models.CharField(
+        max_length=32,
+        choices=ProcessingStatus.choices,
+        default=ProcessingStatus.PENDING
+    )
+    storage_prefix = models.CharField(
+        max_length=512,
+        blank=True,
+        null=True,
+    )
+    processing_error = models.CharField(
+        max_length=512,
+        blank=True,
+        null=True,
+    )
+    manifest_url = models.URLField(
+        max_length=512,
+        blank=True,
+        null=True,
+    )
     thumbnail_url = models.URLField()
-    episode_number = models.PositiveSmallIntegerField()
+    duration_seconds = models.PositiveIntegerField()  # 초 단위
+
+    def __str__(self):
+        return f"[{self.name}] process: ({self.processing_status})"
+
+class TranscodeJob(models.Model):
+    video = models.ForeignKey(Video, related_name="transcode_jobs", on_delete=models.CASCADE)
+    status = models.CharField(
+        max_length=20,
+        choices=TranscodeJobStatus.choices,
+        default=TranscodeJobStatus.PENDING,
+    )
+    backend = models.CharField(max_length=32, default="local_ffmpeg")
+    external_jbo_id = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+    )
+    attempt_count = models.PositiveIntegerField(default=0) # 재시도
+    error_log = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(blank=True, null=True)
+    finished_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        unique_together = ("season", "episode_number")
+        ordering = ["-created_at"]
+
+

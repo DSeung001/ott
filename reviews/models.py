@@ -14,8 +14,8 @@ class Review(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    season = models.ForeignKey('media.Season', on_delete=models.CASCADE, null=True, blank=True,
-                               related_name='season_reviews')
+    series = models.ForeignKey('media.Series', on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='series_reviews')
     video = models.ForeignKey('media.Video', on_delete=models.CASCADE, null=True, blank=True,
                               related_name='video_reviews')
 
@@ -40,8 +40,8 @@ class Review(models.Model):
         constraints = [
             CheckConstraint(
                 condition=(
-                        Q(season__isnull=False, video__isnull=True) |
-                        Q(season__isnull=True, video__isnull=False)
+                        Q(series__isnull=False, video__isnull=True) |
+                        Q(series__isnull=True, video__isnull=False)
                 ),
                 name='review_must_have_target',
             ),
@@ -50,12 +50,12 @@ class Review(models.Model):
                 condition=(
                     Q(rating__isnull=True) |
                     Q(
-                        season__isnull=False,
+                        series__isnull=False,
                         video__isnull=True,
                         parent__isnull=True,
                     )
                 ),
-                name='rating_only_on_season_review',
+                name='rating_only_on_series_review',
             )
         ]
 

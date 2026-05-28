@@ -146,3 +146,16 @@ AUTHENTICATION_BACKENDS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
+
+# 업로드 경로
+MEDIA_ROOT = BASE_DIR / 'media_files'
+MEDIA_URL = '/media/'
+
+# API 응답·DB에 넣을 manifest 절대 URL (dev)
+PUBLIC_MEDIA_BASE_URL = 'http://localhost:8000'
+
+TRANSCODE_BACKEND = 'local_ffmpeg'  # 나중: 'remote_go'
+
+# 대용량 업로드 방지, 추후 관련 로직 필요
+DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000   # 500MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000
